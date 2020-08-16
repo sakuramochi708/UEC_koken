@@ -41,7 +41,7 @@ void check_slot(char *left, char *center, char *right, int *have_coin){
         printf("You WIN! +100 coins\n");
         *have_coin += 100;
         if(bonus == 0){
-          bonus_mode(&have_coin);
+          bonus_mode(have_coin);
         }
       }
     }
@@ -52,7 +52,7 @@ void check_slot(char *left, char *center, char *right, int *have_coin){
         printf("You WIN! +100 coins\n");
         *have_coin += 100;
         if(bonus == 0){
-          bonus_mode(&have_coin);  
+          bonus_mode(have_coin);  
         }
       }
     }
@@ -67,7 +67,7 @@ void check_slot(char *left, char *center, char *right, int *have_coin){
         printf("You WIN! +15 coins\n");
         *have_coin += 15;
         if(bonus == 0){
-          bonus_mode(&have_coin);
+          bonus_mode(have_coin);
         }
       }
     }
@@ -78,7 +78,7 @@ void check_slot(char *left, char *center, char *right, int *have_coin){
         printf("You WIN! +10 coins\n");
         *have_coin += 10;
         if(bonus == 0){
-          bonus_mode(&have_coin);
+          bonus_mode(have_coin);
         }
       }
     }
@@ -99,6 +99,7 @@ void bonus_mode(int *have_coin){
   int pippi;
   int put_int;
   char *replay = "  replay  ";
+  char string_buffer[100];
   srand(time(NULL));
 
   // ボーナスモード突入
@@ -124,10 +125,12 @@ void bonus_mode(int *have_coin){
           j--;
           continue;
         }
-
+        // 入力
         print_slot(slot[1], slot[2], slot[3]);
         printf("1 = left lane, 2 = center lane, 3 = right lane  (5 = exit)\n");
-        printf("push %d! > ", pippi);  scanf("%d", &put_int);
+        printf("push %d !> ", pippi);  
+        scanf("%s", string_buffer); 
+        put_int = atoi(string_buffer);
         // ボーナスモード５:exit
         if(put_int == 5){
           printf("終了します。残りコインの枚数は%d枚でした。\n", *have_coin + 1);
@@ -202,12 +205,11 @@ void print_slot(char *left, char *center, char *right){
 
 
 int main(int argc, char *argv[]){
-  // int i;
   int have_coin;
   int command;
-  int bonus;
   srand(time(NULL));
   char *replay = "  replay  ";
+  char string_buffer[100];
   char slot_machine_x[7][30] = 
   {"    7     ", " POKEMON  ", "  cherry  ", "moon_stone", " pikachu  ", "  replay  ",  "  replay  "};
   char slot_machine_y[10][30] = 
@@ -236,11 +238,11 @@ int main(int argc, char *argv[]){
       return 0;
     }
     // 実行モード選択
-    // （キーボードから数字以外を受け取るとバグります。）
     while(1){
       printf("Now coin = %d\n", have_coin);
       printf("1 = slot start!   5 = exit\n");
-      printf("> ");  scanf("%d", &command);
+      printf("> ");  scanf("%s", string_buffer); 
+      command = atoi(string_buffer);
       if(command >= 0 && command <= 9){
         break;
       }
