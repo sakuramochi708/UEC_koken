@@ -1,1 +1,435 @@
-a
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <style>
+    /* 配置の基準となるラッパーブロック; とりあえず背景色もここで設定している */
+    .scrollableChartWrapper {
+      position: relative;
+      background-color: white;
+    }
+
+    /* スクロール可能グラフを囲む div */
+    .scrollableChartWrapper>div {
+      position: relative;
+      overflow-x: scroll;
+    }
+
+    /* Y軸イメージコピー用 canvas */
+    .scrollableChartWrapper>canvas {
+      position: absolute;
+      /* これにより、上の div と重なる位置に canvas が配置される */
+      left: 0;
+      top: 0;
+      background-color: white;
+      /* ここをコメントアウトすると、背景色が透明になるので、Y軸を透かしてグラフ部分が見えるようになる */
+    }
+  </style>
+
+  <meta charset="UTF-8">
+  <base target="_top">
+  <title>学生スタンプラリー活動状況</title>
+
+  <!-- その他のスクリプト -->
+  <script type="text/javascript">
+
+    // GAS版 ブラウザ更新
+    function update() {
+      google.script.run
+        .withSuccessHandler(result).getScriptUrl();
+      function result(url) {
+        window.open(url, '_top')
+      }
+    }
+
+    // null点を無視する関数
+    function change(id) {
+      switch (id) {
+        case null:
+          return " ";
+          break;
+        default:
+          return id.toString();
+      }
+    }
+
+    // JSONファイルとして出力（デバッグ用）
+    function display_json() {
+      var elem = document.getElementById("output");
+
+      //JSONデータの取得
+      var content = <?= getData(); ?>; /////////////////////////////////////////
+      elem.innerHTML = content;
+    }
+
+  </script>
+</head>
+
+
+
+<body>
+  <h1>学生チェックポイント通過状況</h1>
+
+  <!-- デバッグ -->
+  <!-- <div id="debug">
+    このボタンはデバッグボタンです。
+    <input id="b_debug" type="button" value="button" onclick="display_json();">
+  </div>
+  <br> -->
+
+
+  <!-- リロード -->
+  <div id="txt1">
+    ブラウザ画面は手動更新です。最新の情報はリロードをしてください。
+    <input id="b_update" type="button" value="ブラウザ手動更新" onclick="update()">
+  </div>
+
+  <!-- 最終更新時刻を表示する段落 -->
+  <div id="view_time">
+  </div>
+
+  <br>
+
+  <!-- テキストboxにグラフで表示したい学籍番号を入力 -->
+  <div>
+    このテキストボックスに、グラフで表示したい学籍番号を「2000001,2000002,2000003」のように送信してください。<br>
+    ブラウザを再読み込みさせると、この情報が失われます。また、新たにボックスに番号を入力すると、以前のデータは消えます。ご注意ください。
+    <form id="show_graph_data">
+      <input type="text" id="input-shownumber" size="100">
+      <input type="text" name="dummy" style="display:none;">
+      <input type="button" onclick="is_press_button();" value="表示する">
+    </form>
+  </div>
+
+  <br>
+
+  <!-- テキスト出力Box -->
+  <div>
+    現在、グラフに表示している学籍番号
+  </div>
+  <div id="output">
+  </div>
+
+  <br>
+
+  <!-- グラフを手動更新ボタン -->
+  <!-- <div>
+    手動でグラフだけを更新したい場合はこちら
+    <input type="button" value="グラフを更新" onclick="update_graph()">
+    <br>
+    <span style="color:red">注意：最新情報に更新されません。最新情報はページをリロードしてください </span>
+  </div> -->
+
+  <br>
+
+  <!-- グラフ -->
+  <div class="scrollableChartWrapper">
+    <div>
+      <canvas id="chart" height="1000">canvasは対応していません</canvas>
+    </div>
+    <canvas id="yAxis" width="0"></canvas>
+  </div>
+
+
+
+  <!-- スクリプトエリア -->
+
+  <!-- ライブラリ読込 -->
+  <script src=" https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"
+    integrity="sha512-vBmx0N/uQOXznm/Nbkp7h0P1RfLSj0HQrFSzV8m7rOGyj30fYAOKHYvCNez+yM8IrfnW0TCodDEjRqf6fodf/Q=="
+    crossorigin="anonymous"></script>
+
+  <script>
+
+    var timelabels = [
+      '11:00', '11:01', '11:02', '11:03', '11:04', '11:05', '11:06', '11:07', '11:08', '11:09', '11:10', '11:11', '11:12', '11:13', '11:14', '11:15', '11:16', '11:17', '11:18', '11:19', '11:20', '11:21', '11:22', '11:23', '11:24', '11:25', '11:26', '11:27', '11:28', '11:29', '11:30', '11:31', '11:32', '11:33', '11:34', '11:35', '11:36', '11:37', '11:38', '11:39', '11:40', '11:41', '11:42', '11:43', '11:44', '11:45', '11:46', '11:47', '11:48', '11:49', '11:50', '11:51', '11:52', '11:53', '11:54', '11:55', '11:56', '11:57', '11:58', '11:59',
+      '12:00', '12:01', '12:02', '12:03', '12:04', '12:05', '12:06', '12:07', '12:08', '12:09', '12:10', '12:11', '12:12', '12:13', '12:14', '12:15', '12:16', '12:17', '12:18', '12:19', '12:20', '12:21', '12:22', '12:23', '12:24', '12:25', '12:26', '12:27', '12:28', '12:29', '12:30', '12:31', '12:32', '12:33', '12:34', '12:35', '12:36', '12:37', '12:38', '12:39', '12:40', '12:41', '12:42', '12:43', '12:44', '12:45', '12:46', '12:47', '12:48', '12:49', '12:50', '12:51', '12:52', '12:53', '12:54', '12:55', '12:56', '12:57', '12:58', '12:59',
+      '13:00', '13:01', '13:02', '13:03', '13:04', '13:05', '13:06', '13:07', '13:08', '13:09', '13:10', '13:11', '13:12', '13:13', '13:14', '13:15', '13:16', '13:17', '13:18', '13:19', '13:20', '13:21', '13:22', '13:23', '13:24', '13:25', '13:26', '13:27', '13:28', '13:29', '13:30', '13:31', '13:32', '13:33', '13:34', '13:35', '13:36', '13:37', '13:38', '13:39', '13:40', '13:41', '13:42', '13:43', '13:44', '13:45', '13:46', '13:47', '13:48', '13:49', '13:50', '13:51', '13:52', '13:53', '13:54', '13:55', '13:56', '13:57', '13:58', '13:59',
+      '14:00', '14:01', '14:02', '14:03', '14:04', '14:05', '14:06', '14:07', '14:08', '14:09', '14:10', '14:11', '14:12', '14:13', '14:14', '14:15', '14:16', '14:17', '14:18', '14:19', '14:20', '14:21', '14:22', '14:23', '14:24', '14:25', '14:26', '14:27', '14:28', '14:29', '14:30', '14:31', '14:32', '14:33', '14:34', '14:35', '14:36', '14:37', '14:38', '14:39', '14:40', '14:41', '14:42', '14:43', '14:44', '14:45', '14:46', '14:47', '14:48', '14:49', '14:50', '14:51', '14:52', '14:53', '14:54', '14:55', '14:56', '14:57', '14:58', '14:59',
+      '15:00', '15:01', '15:02', '15:03', '15:04', '15:05', '15:06', '15:07', '15:08', '15:09', '15:10', '15:11', '15:12', '15:13', '15:14', '15:15', '15:16', '15:17', '15:18', '15:19', '15:20', '15:21', '15:22', '15:23', '15:24', '15:25', '15:26', '15:27', '15:28', '15:29', '15:30', '15:31', '15:32', '15:33', '15:34', '15:35', '15:36', '15:37', '15:38', '15:39', '15:40', '15:41', '15:42', '15:43', '15:44', '15:45', '15:46', '15:47', '15:48', '15:49', '15:50', '15:51', '15:52', '15:53', '15:54', '15:55', '15:56', '15:57', '15:58', '15:59',
+      '16:00', '16:01', '16:02', '16:03', '16:04', '16:05', '16:06', '16:07', '16:08', '16:09', '16:10', '16:11', '16:12', '16:13', '16:14', '16:15', '16:16', '16:17', '16:18', '16:19', '16:20', '16:21', '16:22', '16:23', '16:24', '16:25', '16:26', '16:27', '16:28', '16:29', '16:30', '16:31', '16:32', '16:33', '16:34', '16:35', '16:36', '16:37', '16:38', '16:39', '16:40', '16:41', '16:42', '16:43', '16:44', '16:45', '16:46', '16:47', '16:48', '16:49', '16:50', '16:51', '16:52', '16:53', '16:54', '16:55', '16:56', '16:57', '16:58', '16:59',
+      '17:00', '17:01', '17:02', '17:03', '17:04', '17:05', '17:06', '17:07', '17:08', '17:09', '17:10', '17:11', '17:12', '17:13', '17:14', '17:15', '17:16', '17:17', '17:18', '17:19', '17:20', '17:21', '17:22', '17:23', '17:24', '17:25', '17:26', '17:27', '17:28', '17:29', '17:30', '17:31', '17:32', '17:33', '17:34', '17:35', '17:36', '17:37', '17:38', '17:39', '17:40', '17:41', '17:42', '17:43', '17:44', '17:45', '17:46', '17:47', '17:48', '17:49', '17:50', '17:51', '17:52', '17:53', '17:54', '17:55', '17:56', '17:57', '17:58', '17:59',
+      '18:00'
+      // , '18:01', '18:02', '18:03', '18:04', '18:05', '18:06', '18:07', '18:08', '18:09', '18:10', '18:11', '18:12', '18:13', '18:14', '18:15', '18:16', '18:17', '18:18', '18:19', '18:20', '18:21', '18:22', '18:23', '18:24', '18:25', '18:26', '18:27', '18:28', '18:29', '18:30', '18:31', '18:32', '18:33', '18:34', '18:35', '18:36', '18:37', '18:38', '18:39', '18:40', '18:41', '18:42', '18:43', '18:44', '18:45', '18:46', '18:47', '18:48', '18:49', '18:50', '18:51', '18:52', '18:53', '18:54', '18:55', '18:56', '18:57', '18:58', '18:59',
+      // '19:00', '19:01', '19:02', '19:03', '19:04', '19:05', '19:06', '19:07', '19:08', '19:09', '19:10', '19:11', '19:12', '19:13', '19:14', '19:15', '19:16', '19:17', '19:18', '19:19', '19:20', '19:21', '19:22', '19:23', '19:24', '19:25', '19:26', '19:27', '19:28', '19:29', '19:30', '19:31', '19:32', '19:33', '19:34', '19:35', '19:36', '19:37', '19:38', '19:39', '19:40', '19:41', '19:42', '19:43', '19:44', '19:45', '19:46', '19:47', '19:48', '19:49', '19:50', '19:51', '19:52', '19:53', '19:54', '19:55', '19:56', '19:57', '19:58', '19:59',
+      // '20:00', '20:01', '20:02', '20:03', '20:04', '20:05', '20:06', '20:07', '20:08', '20:09', '20:10', '20:11', '20:12', '20:13', '20:14', '20:15', '20:16', '20:17', '20:18', '20:19', '20:20', '20:21', '20:22', '20:23', '20:24', '20:25', '20:26', '20:27', '20:28', '20:29', '20:30', '20:31', '20:32', '20:33', '20:34', '20:35', '20:36', '20:37', '20:38', '20:39', '20:40', '20:41', '20:42', '20:43', '20:44', '20:45', '20:46', '20:47', '20:48', '20:49', '20:50', '20:51', '20:52', '20:53', '20:54', '20:55', '20:56', '20:57', '20:58', '20:59',
+      // '21:00'
+    ] // 421要素(601)
+
+
+    // 学籍番号のデータ配列とグラフの表示フラグ
+    var flag_data_20 = new Array(801).fill(false);  // フラグ管理
+    var data_20 = new Array(801);                  // データ配列
+    for (let p = 0; p < data_20.length; p++) {
+      data_20[p] = new Array(timelabels.length).fill(null);
+    }
+
+
+
+    // 最終時刻を表示する
+    document.getElementById("view_time").innerHTML = getTime();
+
+    // 現在時刻を取得する
+    function getTime() {
+      let now = new Date();
+      return "最終更新: " + ('00' + now.getHours()).slice(-2) + ":" + ('00' + now.getMinutes()).slice(-2);
+    }
+
+    function translate_data(num) {
+      return data_20[num];
+    }
+
+    function translate_flag(num) {
+      return flag_data_20[num];
+    }
+
+    // グラフを更新する
+    function update_graph() {
+      if (window.myChart) {
+        window.myChart.destroy();
+      }
+      drawChart();
+    }
+
+    // テキストboxでボタンを押す
+    function is_press_button() {
+      for (let i = 0; i < flag_data_20.length; i++) {
+        flag_data_20[i] = true;
+      }
+
+      var textbox = document.getElementById("input-shownumber").value;
+      const words = textbox.split(',');
+
+      for (const word of words) {
+        parseInt(word);
+      }
+
+      for (let i = 0; i < words.length; i++) {
+        flag_data_20[words[i] % 2010000] = false;
+      }
+
+      document.getElementById("output").innerHTML = textbox;
+      update_graph();
+    }
+
+    // グラフの表示
+    function drawChart() {
+
+      // Y軸コピー用 canvas
+      var cvsYAxis = document.getElementById('yAxis');
+      var ctxYAxis = cvsYAxis.getContext('2d');
+
+      var testflag = false;
+
+      // jsonファイル読み込み
+      var json_data = <?= getData(); ?>;  ////////////////////////////////////////
+      var jsonfile = JSON.parse(json_data);
+
+      // jsonから各種データを抽出
+      var timestamp = new Array(jsonfile.length);
+      var number = new Array(jsonfile.length);
+      var checkpoint = new Array(jsonfile.length);
+
+      for (var i = 0; i < jsonfile.length; i++) {
+        timestamp[i] = parseInt((jsonfile[i]["タイムスタンプ"] + (3600 * 9)) / 60);  // timestampのミリ秒を日本時刻に換算して、ミリ秒>分にしている。
+        number[i] = parseInt(jsonfile[i]["メールアドレス"]);
+        checkpoint[i] = jsonfile[i]["チェックポイント"]
+      }
+
+      // 1h = 3600s
+      let time = new Date("2021-10-09T11:00");  // ここを開催当日の時刻にする！！ ///////////////////////////////////
+      time = parseInt(((((time.getTime()) / 1000) % 1000000) + (3600 * 9)) / 60); // 基準時刻の11時の分までの時間整数
+
+      for (i = 0; i < timestamp.length; i++) {
+        let index = timestamp[i] - time;
+        if (index >= timelabels.length) {
+          continue;
+        } 
+        data_20[number[i] % 2010000][index] = checkpoint[i];
+        if (checkpoint[i] - parseInt(checkpoint[i]) > 0.05 && checkpoint[i] - parseInt(checkpoint[i]) < 0.15) {
+          data_20[number[i] % 2010000][index + 1] = -0.9;
+        } 
+      }
+
+      // X軸の1データ当たりの幅
+      var xAxisStepSize = 10;
+      // グラフ全体の幅を計算
+      var chartWidth = timestamp.length * xAxisStepSize;
+
+      // グラフ描画用 canvas
+      var cvsChart = document.getElementById('chart');
+      var ctxChart = cvsChart.getContext('2d');
+
+      // ここをやらないと、再描画のときにおかしくなる //
+      ctxChart.canvas.width = chartWidth;
+      ctxChart.canvas.height = 1000;
+
+      // グラフ描画用canvasのstyle.width(すなわち全データを描画するのに必要なサイズ)に上記の幅を設定
+      cvsChart.style.width = chartWidth + "px";
+
+      // 二重実行防止用フラグ
+      var copyYAxisCalled = false;
+
+      // Y軸イメージのコピー関数
+      function copyYAxisImage(chart) {
+        //console.log("copyYAxisCalled="+copyYAxisCalled);
+
+        if (copyYAxisCalled) return;
+
+        copyYAxisCalled = true;
+
+        // グラフ描画後は、canvas.width(height):canvas.style.width(height) 比は、下記 scale の値になっている
+        var scale = window.devicePixelRatio;
+
+        // Y軸のスケール情報
+        var yAxScale = chart.scales['y-axis-0'];
+        // console.log(yAxScale);
+
+        // Y軸部分としてグラフからコピーすべき幅 (TODO: 良く分かっていない)
+        var yAxisStyleWidth0 = yAxScale.width - 10;
+
+        // canvas におけるコピー幅(yAxisStyleWidth0を直接使うと微妙にずれるので、整数値に切り上げる)
+        var copyWidth = Math.ceil(yAxisStyleWidth0 * scale);
+        // Y軸canvas の幅(右側に少し空白部を残す)
+        var yAxisCvsWidth = copyWidth + 4;
+        // 実際の描画幅(styleに設定する)
+        var yAxisStyleWidth = yAxisCvsWidth / scale;
+
+        // Y軸部分としてグラフからコピーすべき高さ (TODO: 良く分かっていない) ⇒これを実際の描画高とする(styleに設定)
+        var yAxisStyleHeight = yAxScale.height + yAxScale.top + 10;
+        // canvas におけるコピー高
+        var copyHeight = yAxisStyleHeight * scale;
+        // Y軸canvas の高さ
+        var yAxisCvsHeight = copyHeight;
+
+
+        // Y軸canvas の幅と高さを設定
+        cvsYAxis.width = yAxisCvsWidth;
+        cvsYAxis.height = yAxisCvsHeight;
+
+        // Y軸canvas.style(実際に描画される大きさ)の幅と高さを設定
+        cvsYAxis.style.width = yAxisStyleWidth + "px";
+        cvsYAxis.style.height = yAxisStyleHeight + "px";
+
+        // グラフcanvasからY軸部分のイメージをコピーする
+        ctxYAxis.drawImage(cvsChart, 0, 0, copyWidth, copyHeight, 0, 0, copyWidth, copyHeight);
+
+        // 軸ラベルのフォント色を透明に変更して、以降、再表示されても見えないようにする
+        chart.options.scales.yAxes[0].ticks.fontColor = 'rgba(0,0,0,0)';
+        chart.update();
+        // 最初に描画されたグラフのY軸ラベル部分をクリアする
+        ctxChart.clearRect(0, 0, yAxisStyleWidth, yAxisStyleHeight);
+      }
+
+
+
+      // グラフ描画
+      window.myChart = new Chart(ctxChart, {
+        type: 'line',
+        parsing: false,
+
+        data: {
+          labels: timelabels,
+          datasets: [
+            {
+              label: '2010001',
+              data: data_20[1],
+              backgroundColor: 'rgba(116, 222, 146, 1.0)',
+              borderColor: 'rgba(116, 222, 146, 0.5)',
+              spanGaps: true,
+              fill: false,
+              pointRadius: 10,
+              pointHoverRadius: 10,
+              pointHitRadius: 10,
+              hidden: flag_data_20[1],
+              tension: 0,
+              steppedLine: true,
+            },
+            {
+              label: '2010002',
+              data: data_20[2],
+              backgroundColor: 'rgba(54, 190, 232, 1.0)',
+              borderColor: 'rgba(54, 190, 232, 0.5)',
+              spanGaps: true,
+              fill: false,
+              pointRadius: 10,
+              pointHoverRadius: 10,
+              pointHitRadius: 10,
+              hidden: flag_data_20[2],
+              tension: 0,
+              steppedLine: true,
+            },
+           // 800人分用意されていました。
+          ]
+        },
+
+        options: {
+          responsive: false,  // true（デフォルト）にすると画面の幅に合わせてしまう
+          maintainAspectRatio: true,
+
+          scales: {
+            xAxes: [{
+              //ここで軸を時間を設定する
+              type: 'time',
+              time: {
+                parser: 'HH:mm',
+                unit: 'minute',
+                stepSize: 1,
+                displayFormats: {
+                  'hour': 'HH:mm'
+                }
+              },
+              //X軸の範囲を指定
+              ticks: {
+                min: '11:00',
+                max: '18:00'
+              }
+            }],
+            yAxes: [           // Ｙ軸 
+              {
+                ticks: {     // 目盛り        
+                  min: -1,      // 最小値
+                  // beginAtZero: true でも同じ
+                  max: 28,     // 最大値
+                  stepSize: 1,  // 間隔
+                  callback: function (value, index, values) {
+                    return value + ":  " + addname(value + 1);
+                  },
+                }
+              }
+            ]
+
+          }
+        },
+
+        plugins: [
+          {
+            // 描画完了後に copyYAxisImage() を呼び出す
+            afterRender: copyYAxisImage
+          }
+        ]
+      }
+      );
+    }
+
+    function addname(value) {
+      var labnum = [
+        "移動中",
+        "集合教室",    // 0
+       // 27研究室の名前が記入されていました
+      ];
+      if (labnum.length <= value) {
+        return " ";
+      }
+      return labnum[value];
+    };
+
+    drawChart();
+  </script>
+
+</body>
+
+</html>
