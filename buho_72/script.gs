@@ -96,7 +96,7 @@ function fetch_new_arrival_mail(interval) {
 function setting_start_of_search_mail_period() {
   // 今回は61秒前を設定
   let now_time = Math.floor(new Date().getTime() / 1000);
-  let time_term = now_time - ((60 * 30) + 1);
+  let time_term = now_time - ((60 * 1) + 1);
   return time_term;
 }
 
