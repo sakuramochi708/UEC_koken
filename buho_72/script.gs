@@ -112,8 +112,8 @@ function main() {
   let new_Me = fetch_new_arrival_mail(setting_start_of_search_mail_period())
   if (new_Me[0].length > 0) {
     for (let i = new_Me[0].length - 1; i >= 0; i--) {
-      if(!new_me[1][i])
-      send_notify_to_discord(new_Me[0][i])
+      if (new_Me[1][i] == false)
+        send_notify_to_discord(new_Me[0][i])
     }
   }
 }
